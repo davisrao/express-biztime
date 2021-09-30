@@ -8,11 +8,9 @@ const { NotFoundError } = require("../expressError.js");
 /** GET list of companies / => {companies: [{code, name}, ...]} */
 
 router.get("/", async function (req, res, next) {
-  //select all from DB
-  // return list of all per below
 
   const result = await db.query(
-    `SELECT * FROM companies`
+    `SELECT code, name FROM companies ORDER BY code`
   );
 
   const companies = result.rows;
@@ -20,9 +18,12 @@ router.get("/", async function (req, res, next) {
   return res.json({ companies });
 });
 
-/** GET a company with company code / => {company: {code, name, description}} */
+/** 
+ * GET a company with company code / => {company: {code, name, description}} 
+ * */
+
 router.get("/:code", async function (req, res, next) {
-  //select using company code
+
   const compCode = req.params.code;
   const result = await db.query(
     `SELECT code, name, description 
@@ -35,7 +36,7 @@ router.get("/:code", async function (req, res, next) {
   return res.json({ company });
 });
 
-/** Create new company, return {company: {code, name, description}} */
+/** POST Create new company, return {company: {code, name, description}} */
 
 router.post("/", async function (req, res, next) {
   const { code, name, description } = req.body;
@@ -50,8 +51,9 @@ router.post("/", async function (req, res, next) {
   return res.status(201).json({ company });
 });
 
-/** Edit existing company details, return {company: {code, name, description}} 
+/** PUT Edit existing company details, return {company: {code, name, description}} 
  * or 404 if not found */
+
 router.put("/:code", async function (req, res, next) {
   const { name, description } = req.body;
 
@@ -70,15 +72,17 @@ router.put("/:code", async function (req, res, next) {
   return res.status(201).json({ company });
 });
 
-/** Delete company, return {status: "deleted"} or 404 if company not found*/
+/** DELETE a company, return {status: "deleted"} or 404 if company not found*/
 router.delete("/:code", async function (req, res, next) {
   const compCode = req.params.code;
 
-  const result = await db.query("SELECT * FROM companies WHERE code=$1", [compCode]);
-  console.log(result);
+  const result = await db.query(
+    `DELETE FROM companies 
+    WHERE code=$1 
+    RETURNING code`, [compCode]);
+
   if (!result.rows[0]) throw new NotFoundError(`${compCode} is not found`);
 
-  await db.query("DELETE FROM companies WHERE code=$1", [compCode]);
   return res.json({ status: "deleted" })
 });
 
