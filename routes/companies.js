@@ -5,7 +5,9 @@ const db = require("../db.js");
 const { NotFoundError } = require("../expressError.js");
 
 
-/** GET list of companies / => {companies: [{code, name}, ...]} */
+/** 
+ * GET list of companies / => {companies: [{code, name}, ...]} 
+ * */
 
 router.get("/", async function (req, res, next) {
 
@@ -19,7 +21,8 @@ router.get("/", async function (req, res, next) {
 });
 
 /** 
- * GET a company with company code / => {company: {code, name, description}} 
+ * GET a company with company code / => {company: {code, name, description,
+ * invoices:[id,id,id]}} 
  * */
 
 router.get("/:code", async function (req, res, next) {
@@ -33,10 +36,29 @@ router.get("/:code", async function (req, res, next) {
 
   const company = result.rows[0];
 
+  if(!company){
+    throw new NotFoundError(`company '${compCode}' does not exist`);
+  };
+
+  const invoiceResult = await db.query(
+    `SELECT id 
+    FROM invoices
+    WHERE comp_code = $1
+    ORDER BY id`,[compCode]
+  );
+
+  const companyInvoices = invoiceResult.rows;
+  
+  const invoiceIds = companyInvoices.map(n => n.id);
+
+  company.invoices = invoiceIds;
+
   return res.json({ company });
 });
 
-/** POST Create new company, return {company: {code, name, description}} */
+/** 
+ * POST Create new company, return {company: {code, name, description}} 
+ * */
 
 router.post("/", async function (req, res, next) {
   const { code, name, description } = req.body;
@@ -52,7 +74,8 @@ router.post("/", async function (req, res, next) {
 });
 
 /** PUT Edit existing company details, return {company: {code, name, description}} 
- * or 404 if not found */
+ * or 404 if not found 
+ * */
 
 router.put("/:code", async function (req, res, next) {
   const { name, description } = req.body;
@@ -72,7 +95,9 @@ router.put("/:code", async function (req, res, next) {
   return res.status(201).json({ company });
 });
 
-/** DELETE a company, return {status: "deleted"} or 404 if company not found*/
+/** 
+ * DELETE a company, return {status: "deleted"} or 404 if company not found
+ * */
 router.delete("/:code", async function (req, res, next) {
   const compCode = req.params.code;
 
@@ -83,7 +108,7 @@ router.delete("/:code", async function (req, res, next) {
 
   if (!result.rows[0]) throw new NotFoundError(`${compCode} is not found`);
 
-  return res.json({ status: "deleted" })
+  return res.json({ status: "deleted" });
 });
 
 module.exports = router;
